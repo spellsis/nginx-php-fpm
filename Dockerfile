@@ -1,4 +1,4 @@
-FROM php:8.2.7-fpm-alpine3.18
+FROM php:8.3.0-fpm-alpine3.18
 
 LABEL maintainer="Ric Harvey <ric@squarecows.com>"
 
@@ -71,12 +71,12 @@ RUN apk add --no-cache --virtual .sys-deps \
     docker-php-ext-install gd && \
      pip install --upgrade pip && \
     docker-php-ext-install pdo_mysql mysqli pdo_sqlite pgsql pdo_pgsql exif intl xsl soap zip && \
-    pecl install -o -f xdebug && \
+    #pecl install -o -f xdebug && \
     pecl install -o -f redis && \ 
     pecl install -o -f mongodb && \
     echo "extension=redis.so" > /usr/local/etc/php/conf.d/redis.ini && \
     echo "extension=mongodb.so" > /usr/local/etc/php/conf.d/mongodb.ini && \
-    echo "zend_extension=xdebug" > /usr/local/etc/php/conf.d/xdebug.ini && \
+    # echo "zend_extension=xdebug" > /usr/local/etc/php/conf.d/xdebug.ini && \
     docker-php-source delete && \
     mkdir -p /var/www/app && \
   # Install composer and certbot
@@ -150,5 +150,23 @@ ADD errors/ /var/www/errors
 
 EXPOSE 443 80
 
-WORKDIR "/var/www/html"
+# CUSTOM
+WORKDIR /app
+
+RUN curl -H 'Pragma: no-cache' -fsSL https://deb.nodesource.com/setup_19.x
+RUN apk add nodejs-current npm --no-cache
+RUN docker-php-ext-install pcntl
+
+RUN apk upgrade --update
+RUN apk add --no-cache \
+		$PHPIZE_DEPS \
+		openssl-dev
+
+RUN pecl install swoole
+RUN docker-php-ext-enable swoole
+
+RUN chown -R www-data:www-data /app
+
+RUN ln -sf /usr/share/zoneinfo/Europe/Kiev /etc/localtime && echo "Europe/Kiev" > /etc/timezone
+
 CMD ["/start.sh"]
